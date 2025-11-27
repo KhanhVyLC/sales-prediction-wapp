@@ -103,15 +103,15 @@
     <div class="container">
         <div class="header">
             <h1>☕ Sales Prediction System</h1>
-            <p>Powered by Azure Functions</p>
+            <p>Powered by Azure ML + Render.com</p>
         </div>
 
         <div class="card">
             <div class="config-section">
-                <h3>✅ Azure Functions API</h3>
+                <h3>✅ Cloud API</h3>
                 <div class="alert alert-success">
-                    <strong>✓ Running locally!</strong><br>
-                    API Endpoint: <code>http://localhost:7071/api/predict</code>
+                    <strong>✓ Deployed on Render.com!</strong><br>
+                    API Endpoint: <code>https://sales-prediction-backend-2.onrender.com/predict</code>
                 </div>
                 <button class="btn btn-test" onclick="testConnection()">Test Connection</button>
                 <div id="connectionStatus"></div>
@@ -173,7 +173,10 @@
     </div>
 
     <script>
-        const API_ENDPOINT = 'https://sales-prediction-backend-2.onrender.com';  // ← Đúng port 7071
+        // ✅ FIXED: Thêm /predict vào endpoint
+        const API_ENDPOINT = 'https://sales-prediction-backend-2.onrender.com/predict';
+        const TEST_ENDPOINT = 'https://sales-prediction-backend-2.onrender.com/test';
+        
         let predictionHistory = [];
         window.addEventListener('load', () => { updateHistoryTable(); });
 
@@ -181,15 +184,14 @@
             const statusEl = document.getElementById('connectionStatus');
             statusEl.innerHTML = '<div style="margin-top: 10px;">Testing API...</div>';
             try {
-                const response = await fetch(API_ENDPOINT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ request_type: 'test' })
+                const response = await fetch(TEST_ENDPOINT, {
+                    method: 'GET'
                 });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                statusEl.innerHTML = '<div class="success-box" style="margin-top: 10px;">✓ API is working!</div>';
+                const result = await response.json();
+                statusEl.innerHTML = `<div class="success-box" style="margin-top: 10px;">✓ API is working!<br>Status: ${result.status}</div>`;
             } catch (error) {
-                statusEl.innerHTML = `<div class="error-box" style="margin-top: 10px;"><strong>Connection failed:</strong> ${error.message}<br><br>Make sure Azure Functions is running: <code>func start</code></div>`;
+                statusEl.innerHTML = `<div class="error-box" style="margin-top: 10px;"><strong>Connection failed:</strong> ${error.message}</div>`;
             }
         }
 
@@ -223,22 +225,27 @@
             const resultEl = document.getElementById('resultSection');
             const errorBoxEl = document.getElementById('errorBox');
             const predictBtn = document.getElementById('predictBtn');
+            
             loadingEl.style.display = 'block';
             resultEl.style.display = 'none';
             errorBoxEl.innerHTML = '';
             predictBtn.disabled = true;
+            
             try {
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
+                
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
+                
                 let result = await response.json();
                 if (typeof result === 'string') result = JSON.parse(result);
+                
                 let prediction, modelUsed;
                 if (Array.isArray(result)) {
                     prediction = result[0].prediction;
@@ -249,10 +256,12 @@
                 } else {
                     throw new Error('Unknown response format');
                 }
+                
                 document.getElementById('predictedValue').textContent = `$${prediction.toFixed(2)}`;
                 document.getElementById('modelUsed').textContent = `Model: ${modelUsed}`;
                 resultEl.style.display = 'block';
                 addToHistory(data.data[0], prediction, modelUsed);
+                
             } catch (error) {
                 errorBoxEl.innerHTML = `<div class="error-box"><strong>Prediction Error:</strong> ${error.message}</div>`;
             } finally {
@@ -263,7 +272,14 @@
 
         function addToHistory(data, prediction, modelUsed) {
             const timestamp = new Date().toLocaleString();
-            predictionHistory.unshift({ timestamp, model: modelUsed, state: data.State, marketSize: data.MarketSize, productType: data.ProductType, prediction });
+            predictionHistory.unshift({ 
+                timestamp, 
+                model: modelUsed, 
+                state: data.State, 
+                marketSize: data.MarketSize, 
+                productType: data.ProductType, 
+                prediction 
+            });
             if (predictionHistory.length > 50) predictionHistory = predictionHistory.slice(0, 50);
             updateHistoryTable();
         }
@@ -274,7 +290,9 @@
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No predictions yet</td></tr>';
                 return;
             }
-            tbody.innerHTML = predictionHistory.map(item => `<tr><td>${item.timestamp}</td><td>${item.model}</td><td>${item.state}</td><td>${item.marketSize}</td><td>${item.productType}</td><td><strong>$${item.prediction.toFixed(2)}</strong></td></tr>`).join('');
+            tbody.innerHTML = predictionHistory.map(item => 
+                `<tr><td>${item.timestamp}</td><td>${item.model}</td><td>${item.state}</td><td>${item.marketSize}</td><td>${item.productType}</td><td><strong>$${item.prediction.toFixed(2)}</strong></td></tr>`
+            ).join('');
         }
 
         function clearHistory() {
