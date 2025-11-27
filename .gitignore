@@ -1,0 +1,19 @@
+# Azure Functions
+__pycache__/
+*.py[cod]
+.python_version
+bin/
+obj/
+.vscode/
+
+# Local settings
+.env
+local.settings.json
+api/local.settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/

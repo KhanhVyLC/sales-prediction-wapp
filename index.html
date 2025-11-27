@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Prediction System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        .config-section {
+            background: #d1f2eb;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .config-section h3 { color: #155724; margin-bottom: 15px; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .alert-success {
+            background: #d1f2eb;
+            border: 1px solid #28a745;
+            color: #155724;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 8px; color: #333; }
+        input, select {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-test { background: #28a745; margin-left: 10px; }
+        .result-section { display: none; margin-top: 20px; }
+        .result-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .result-value { font-size: 3em; font-weight: bold; margin: 20px 0; }
+        .error-box { background: #ff6b6b; color: white; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .success-box { background: #28a745; color: white; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .loading { display: none; text-align: center; padding: 20px; }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .history-table th { background: #f5f5f5; font-weight: 600; }
+        .clear-btn { background: #ff6b6b; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .model-selector { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>☕ Sales Prediction System</h1>
+            <p>Powered by Azure Functions</p>
+        </div>
+
+        <div class="card">
+            <div class="config-section">
+                <h3>✅ Azure Functions API</h3>
+                <div class="alert alert-success">
+                    <strong>✓ Running locally!</strong><br>
+                    API Endpoint: <code>http://localhost:7071/api/predict</code>
+                </div>
+                <button class="btn btn-test" onclick="testConnection()">Test Connection</button>
+                <div id="connectionStatus"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Input Features</h2>
+            
+            <div class="model-selector">
+                <label for="modelSelect"><strong>Select Model:</strong></label>
+                <select id="modelSelect">
+                    <option value="RandomForest">Random Forest</option>
+                    <option value="GradientBoosting">Gradient Boosting</option>
+                    <option value="LinearRegression">Linear Regression</option>
+                </select>
+            </div>
+
+            <form id="predictionForm">
+                <div class="form-grid">
+                    <div class="form-group"><label for="areaCode">Area Code</label><input type="number" id="areaCode" required value="206"></div>
+                    <div class="form-group"><label for="state">State</label><select id="state" required><option value="Washington" selected>Washington</option><option value="Connecticut">Connecticut</option><option value="California">California</option><option value="Illinois">Illinois</option><option value="Florida">Florida</option><option value="Massachusetts">Massachusetts</option><option value="New York">New York</option></select></div>
+                    <div class="form-group"><label for="market">Market</label><select id="market" required><option value="West" selected>West</option><option value="Central">Central</option><option value="East">East</option><option value="South">South</option></select></div>
+                    <div class="form-group"><label for="marketSize">Market Size</label><select id="marketSize" required><option value="Major Market" selected>Major Market</option><option value="Small Market">Small Market</option></select></div>
+                    <div class="form-group"><label for="cogs">COGS</label><input type="number" id="cogs" required value="200"></div>
+                    <div class="form-group"><label for="totalExpenses">Total Expenses</label><input type="number" id="totalExpenses" required value="137"></div>
+                    <div class="form-group"><label for="marketing">Marketing</label><input type="number" id="marketing" required value="60"></div>
+                    <div class="form-group"><label for="inventory">Inventory</label><input type="number" id="inventory" required value="849"></div>
+                    <div class="form-group"><label for="budgetProfit">Budget Profit</label><input type="number" id="budgetProfit" required value="180"></div>
+                    <div class="form-group"><label for="budgetCOGS">Budget COGS</label><input type="number" id="budgetCOGS" required value="200"></div>
+                    <div class="form-group"><label for="budgetMargin">Budget Margin</label><input type="number" id="budgetMargin" required value="320"></div>
+                    <div class="form-group"><label for="budgetSales">Budget Sales</label><input type="number" id="budgetSales" required value="520"></div>
+                    <div class="form-group"><label for="productId">Product ID</label><input type="number" id="productId" required value="1"></div>
+                    <div class="form-group"><label for="productType">Product Type</label><select id="productType" required><option value="Coffee" selected>Coffee</option><option value="Espresso">Espresso</option><option value="Tea">Tea</option><option value="Herbal Tea">Herbal Tea</option></select></div>
+                    <div class="form-group"><label for="type">Type</label><select id="type" required><option value="Regular" selected>Regular</option><option value="Decaf">Decaf</option></select></div>
+                </div>
+                <button type="submit" class="btn" id="predictBtn">Predict Sales</button>
+            </form>
+
+            <div class="loading" id="loading"><div class="spinner"></div><p>Processing prediction...</p></div>
+            <div class="result-section" id="resultSection">
+                <div class="result-box">
+                    <h3>Predicted Sales</h3>
+                    <div class="result-value" id="predictedValue">$0.00</div>
+                    <p id="modelUsed">Model: Random Forest</p>
+                </div>
+            </div>
+            <div id="errorBox"></div>
+        </div>
+
+        <div class="card">
+            <h2>Prediction History</h2>
+            <button class="clear-btn" onclick="clearHistory()">Clear History</button>
+            <table class="history-table" id="historyTable">
+                <thead><tr><th>Time</th><th>Model</th><th>State</th><th>Market Size</th><th>Product Type</th><th>Predicted Sales</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = 'http://localhost:7071/api/predict';  // ← Đúng port 7071
+        let predictionHistory = [];
+        window.addEventListener('load', () => { updateHistoryTable(); });
+
+        async function testConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.innerHTML = '<div style="margin-top: 10px;">Testing API...</div>';
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request_type: 'test' })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                statusEl.innerHTML = '<div class="success-box" style="margin-top: 10px;">✓ API is working!</div>';
+            } catch (error) {
+                statusEl.innerHTML = `<div class="error-box" style="margin-top: 10px;"><strong>Connection failed:</strong> ${error.message}<br><br>Make sure Azure Functions is running: <code>func start</code></div>`;
+            }
+        }
+
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                data: [{
+                    AreaCode: parseInt(document.getElementById('areaCode').value),
+                    State: document.getElementById('state').value,
+                    Market: document.getElementById('market').value,
+                    MarketSize: document.getElementById('marketSize').value,
+                    COGS: parseFloat(document.getElementById('cogs').value),
+                    TotalExpenses: parseFloat(document.getElementById('totalExpenses').value),
+                    Marketing: parseFloat(document.getElementById('marketing').value),
+                    Inventory: parseFloat(document.getElementById('inventory').value),
+                    BudgetProfit: parseFloat(document.getElementById('budgetProfit').value),
+                    BudgetCOGS: parseFloat(document.getElementById('budgetCOGS').value),
+                    BudgetMargin: parseFloat(document.getElementById('budgetMargin').value),
+                    BudgetSales: parseFloat(document.getElementById('budgetSales').value),
+                    ProductId: parseInt(document.getElementById('productId').value),
+                    ProductType: document.getElementById('productType').value,
+                    Type: document.getElementById('type').value
+                }],
+                model: document.getElementById('modelSelect').value
+            };
+            await makePrediction(formData);
+        });
+
+        async function makePrediction(data) {
+            const loadingEl = document.getElementById('loading');
+            const resultEl = document.getElementById('resultSection');
+            const errorBoxEl = document.getElementById('errorBox');
+            const predictBtn = document.getElementById('predictBtn');
+            loadingEl.style.display = 'block';
+            resultEl.style.display = 'none';
+            errorBoxEl.innerHTML = '';
+            predictBtn.disabled = true;
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                let result = await response.json();
+                if (typeof result === 'string') result = JSON.parse(result);
+                let prediction, modelUsed;
+                if (Array.isArray(result)) {
+                    prediction = result[0].prediction;
+                    modelUsed = result[0].model_used || data.model;
+                } else if (result.prediction !== undefined) {
+                    prediction = result.prediction;
+                    modelUsed = result.model_used || data.model;
+                } else {
+                    throw new Error('Unknown response format');
+                }
+                document.getElementById('predictedValue').textContent = `$${prediction.toFixed(2)}`;
+                document.getElementById('modelUsed').textContent = `Model: ${modelUsed}`;
+                resultEl.style.display = 'block';
+                addToHistory(data.data[0], prediction, modelUsed);
+            } catch (error) {
+                errorBoxEl.innerHTML = `<div class="error-box"><strong>Prediction Error:</strong> ${error.message}</div>`;
+            } finally {
+                loadingEl.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        }
+
+        function addToHistory(data, prediction, modelUsed) {
+            const timestamp = new Date().toLocaleString();
+            predictionHistory.unshift({ timestamp, model: modelUsed, state: data.State, marketSize: data.MarketSize, productType: data.ProductType, prediction });
+            if (predictionHistory.length > 50) predictionHistory = predictionHistory.slice(0, 50);
+            updateHistoryTable();
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById('historyBody');
+            if (predictionHistory.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No predictions yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = predictionHistory.map(item => `<tr><td>${item.timestamp}</td><td>${item.model}</td><td>${item.state}</td><td>${item.marketSize}</td><td>${item.productType}</td><td><strong>$${item.prediction.toFixed(2)}</strong></td></tr>`).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear the prediction history?')) {
+                predictionHistory = [];
+                updateHistoryTable();
+            }
+        }
+    </script>
+</body>
+</html>
