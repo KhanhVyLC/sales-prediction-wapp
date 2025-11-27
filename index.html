@@ -39,6 +39,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
         
         .header h1 { font-size: 1.8em; font-weight: 600; }
@@ -229,7 +232,7 @@
         
         .result-display {
             background: linear-gradient(135deg, #4338ca, #6366f1);
-            padding: 40px;
+            padding: 30px;
             border-radius: 12px;
             text-align: center;
             margin: 20px 0;
@@ -245,9 +248,9 @@
         }
         
         .result-value {
-            font-size: 3.5em;
+            font-size: 2.8em;
             font-weight: 700;
-            margin: 10px 0;
+            margin: 8px 0;
         }
         
         .result-model {
@@ -285,6 +288,63 @@
         
         .table tbody tr:hover {
             background: var(--bg-hover);
+            cursor: pointer;
+        }
+        
+        .details-row {
+            display: none;
+            background: var(--bg-card);
+        }
+        
+        .details-row.show {
+            display: table-row;
+        }
+        
+        .details-content {
+            padding: 16px;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+        
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.8em;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.85em;
+        }
+        
+        .btn-clear {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-clear:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
         }
         
         .badge {
@@ -581,7 +641,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">Prediction History</div>
-                        <button class="btn-secondary" style="padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.85em;" onclick="clearHistory()">Clear</button>
+                        <button class="btn-clear" onclick="clearHistory()">Clear History</button>
                     </div>
                     <div style="max-height: 400px; overflow-y: auto;">
                         <table class="table">
@@ -745,7 +805,22 @@
                 model,
                 state: data.State,
                 market: data.Market,
-                prediction
+                prediction,
+                details: {
+                    areaCode: data.AreaCode,
+                    marketSize: data.MarketSize,
+                    cogs: data.COGS,
+                    expenses: data.TotalExpenses,
+                    marketing: data.Marketing,
+                    inventory: data.Inventory,
+                    budgetProfit: data.BudgetProfit,
+                    budgetCOGS: data.BudgetCOGS,
+                    budgetMargin: data.BudgetMargin,
+                    budgetSales: data.BudgetSales,
+                    productId: data.ProductId,
+                    productType: data.ProductType,
+                    type: data.Type
+                }
             };
             
             predictionHistory.unshift(entry);
@@ -764,14 +839,75 @@
                 return;
             }
             
-            tbody.innerHTML = predictionHistory.map(item => `
-                <tr>
+            tbody.innerHTML = predictionHistory.map((item, index) => `
+                <tr onclick="toggleDetails(${index})">
                     <td style="font-size: 0.85em;">${item.timestamp.split(',')[1] || item.timestamp}</td>
                     <td><span class="badge badge-info">${item.model}</span></td>
                     <td>${item.state}</td>
-                    <td style="font-weight: 600;">$${item.prediction.toFixed(2)}</td>
+                    <td style="font-weight: 600;">${item.prediction.toFixed(2)}</td>
+                </tr>
+                <tr class="details-row" id="details-${index}">
+                    <td colspan="4">
+                        <div class="details-content">
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Area Code</span>
+                                    <span class="detail-value">${item.details.areaCode}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Market</span>
+                                    <span class="detail-value">${item.market}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Market Size</span>
+                                    <span class="detail-value">${item.details.marketSize}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">COGS</span>
+                                    <span class="detail-value">${item.details.cogs}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Expenses</span>
+                                    <span class="detail-value">${item.details.expenses}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Marketing</span>
+                                    <span class="detail-value">${item.details.marketing}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Inventory</span>
+                                    <span class="detail-value">${item.details.inventory}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Budget Profit</span>
+                                    <span class="detail-value">${item.details.budgetProfit}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Budget Sales</span>
+                                    <span class="detail-value">${item.details.budgetSales}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Product ID</span>
+                                    <span class="detail-value">${item.details.productId}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Product Type</span>
+                                    <span class="detail-value">${item.details.productType}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Type</span>
+                                    <span class="detail-value">${item.details.type}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
+        }
+        
+        function toggleDetails(index) {
+            const detailsRow = document.getElementById(`details-${index}`);
+            detailsRow.classList.toggle('show');
         }
 
         function updateMetrics() {
